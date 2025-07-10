@@ -1,6 +1,6 @@
 emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 20){
   fn_outcome <- function(params, t, d, x, z, p, gammat) {
-    # unpack parameters
+    #unpack parameters
     beta   <- params[1:ncol(x)]        # regression coefficients
     alpha  <- params[ncol(x) + 1]      # treatment effect
     sigma  <- params[ncol(x) + 2]      # scale parameter (> 0)

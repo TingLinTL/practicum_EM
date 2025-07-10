@@ -110,6 +110,7 @@ emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 20){
     z.coef[is.na(z.coef)] = 0
     }
   return(list(p = p, t.coef1 = t.coef1, z.coef = z.coef, sigma = sigma))
+  #all coefficients
   }
   
   

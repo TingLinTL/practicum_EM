@@ -34,6 +34,19 @@ for (i in 1:n_sim) {
     gammaz = -0.8
   )
   
+  #========================================================
+  # plot converfebce of EM algorithm coefficients 
+  # trace <- result_em$trace
+  # matplot(
+  #   1:nrow(trace), trace,
+  #   type = "l", lty = 1,
+  #   xlab = "EM Iteration",
+  #   ylab = "Coefficient Value",
+  #   main = "Convergence of EM Algorithm Coefficients"
+  # )
+  # legend("topright", legend = colnames(trace), col = 1:ncol(trace), lty = 1)
+  #============================================================================
+  
   #compute spce by g-computaion for regular EM algorithm
   res_spce <- compute_SPCE_EM(
     res_em = result_em,

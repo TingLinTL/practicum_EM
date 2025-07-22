@@ -6,8 +6,8 @@ source("regular EM/SPCE_Gcomp_em draft.R")
 source("regular EM/SPCE_ipw_em draft.R")
 
 source("stoEM/SimulateU_surv.R")
-source("stoEM trace.R")
-source("stoEM draft.R")
+source("stoEM/stoEM trace.R")
+source("stoEM/stoEM draft.R")
 source("stoEM/surv_stoEM_G.R")
 source("stoEM/surv_stoEM_ipw.R")
 

@@ -127,7 +127,7 @@ for (i in 1:n_sim) {
 
 mean_spce_G <- mean(spce_estimates_G);mean_spce_G #0.1908726
 mean_spce_W <- mean(spce_estimates_W);mean_spce_W #0.193349
-mean_spce_stoG <-  mean(spce_estimates_Sto_G); mean_spce_stoG 
+mean_spce_stoG <-  mean(spce_estimates_Sto_G); mean_spce_stoG #0.1895913
 mean_spce_stoW <-  mean(spce_estimates_Sto_W); mean_spce_stoW #0.2080809
 
 #500iterations

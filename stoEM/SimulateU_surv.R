@@ -1,4 +1,4 @@
-SimulateU_surv <- function(t, d, z, x, zetat, zetaz, theta = 0.5, iter = 20){
+SimulateU_surv <- function(t, d, z, x, zetat, zetaz, theta, iter = 20){
   #t is a vector of n, time to event
   #d is a vector of n, indicator of event
   #z is a vector of n, treatment

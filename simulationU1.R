@@ -35,7 +35,7 @@ for (i in 1:n_sim) {
   )
   
   #========================================================
-  # plot converfebce of EM algorithm coefficients 
+  # plot convergence of EM algorithm coefficients 
   # trace <- result_em$trace
   # matplot(
   #   1:nrow(trace), trace,

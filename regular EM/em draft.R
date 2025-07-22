@@ -1,4 +1,4 @@
-emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 20){
+emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 50){
   fn_outcome <- function(params, t, d, x, z, p, gammat) {
     # Unpack params
     beta      <- params[1:(ncol(x)+1)]
@@ -70,6 +70,12 @@ emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 20){
   z.coef[is.na(z.coef)] = 0
   
   p = rep(0,n)
+  coef_trace <- matrix(NA, nrow = iter, ncol = length(init_params))  # track beta, alpha, log_sigma
+  colnames(coef_trace) <- c(
+    paste0("beta", 0:ncol(x)),   # intercept & covariates
+    "alpha",
+    "log_sigma"
+  )
   
   for (j in 1:iter) {
     
@@ -110,6 +116,9 @@ emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 20){
     sigma   <- exp(params[ncol(x)+3])            # back-transform log_sigma
     init_params <- c(params[1:(ncol(x)+2)], log(sigma)) 
     
+    # store the *updated* params for plotting
+    coef_trace[j, ] <- init_params
+    
     ## === M-step: treatment model === ##
     z.fit <- optim(par = z.coef[1:(nx+1)],
                    fn  = fn_treat,
@@ -120,7 +129,7 @@ emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 20){
     z.coef[is.na(z.coef)]   <- 0
   }
   
-  return(list(p = p, t.coef1 = t.coef1, z.coef = z.coef, sigma = sigma))
+  return(list(p = p, t.coef1 = t.coef1, z.coef = z.coef, sigma = sigma, trace = coef_trace))
   #all coefficients
   }
   

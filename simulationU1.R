@@ -2,14 +2,14 @@
 source("DataG_U1.R")
 
 source("regular EM/em draft.R")
-source("regular EM/SPCE_Gcomp_em draft.R")
-source("regular EM/SPCE_ipw_em draft.R")
+source("regular EM/SPCE_EM_G.R")
+source("regular EM/SPCE_EM_W.R")
 
 source("stoEM/SimulateU_surv.R")
 source("stoEM/stoEM trace.R")
 source("stoEM/stoEM draft.R")
-source("stoEM/surv_stoEM_G.R")
-source("stoEM/surv_stoEM_ipw.R")
+source("stoEM/SPCE_stoEM_G.R")
+source("stoEM/SPCE_stoEM_W.R")
 
 library(survival)
 set.seed(2000)

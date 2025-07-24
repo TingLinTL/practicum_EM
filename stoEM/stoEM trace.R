@@ -6,7 +6,7 @@ surv_stoEM_trace <- function(t, d, Z, X, zetat, zetaz, B, theta) {
   init_fit <- survreg(Surv(t, d) ~ X + Z, dist = "weibull")
   init_beta <- init_fit$coef      # β0, β_X, β_Z
   init_sigma <- init_fit$scale    # Weibull scale
-  init_Ucoef <- 1                 # manually set initial U coefficient
+  init_Ucoef <- 0                # manually set initial U coefficient
   
   ## ---- total columns = (init betas) + U + sigma ----
   n_coef <- length(init_beta) + 2  

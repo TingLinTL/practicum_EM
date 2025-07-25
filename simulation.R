@@ -1,5 +1,8 @@
 #Simulation
 source("DataG_U1.R")
+source("DataG_U2.R")
+source("DataG_U1&U2.R")
+source("DataG_U3.R")
 
 source("regular EM/em draft.R")
 source("regular EM/SPCE_EM_G.R")
@@ -28,7 +31,11 @@ spce_estimates_Sto_W <- numeric(n_sim)
 for (i in 1:n_sim) {
   cat("Running simulation", i, "of", n_sim, "\n")
   
-  simulate_data(n,tau) #use data_sim 
+  #simulate_data(n,tau) #use data_sim 
+  #simulate_data_U2(n, tau) #U2
+  #simulate_data_U1_U2(n, tau) #U1&U2
+  simulate_data_U3(n, tau) #U3
+  
   x_mat <- as.matrix(data_sim[, c("X1", "X2")]) # Prepare the covariate matrix
   
   ## ===  regular EM algorithm === ##
@@ -125,9 +132,9 @@ for (i in 1:n_sim) {
   
 }
 
-mean_spce_G <- mean(spce_estimates_G);mean_spce_G #0.1908726
-mean_spce_W <- mean(spce_estimates_W);mean_spce_W #0.193349
-mean_spce_stoG <-  mean(spce_estimates_Sto_G); mean_spce_stoG #0.1895913
-mean_spce_stoW <-  mean(spce_estimates_Sto_W); mean_spce_stoW #0.2080809
+mean_spce_G <- mean(spce_estimates_G);mean_spce_G #0.1891319 #u2 0.3571589 #u1&u2 0.3346073
+mean_spce_W <- mean(spce_estimates_W);mean_spce_W #0.1909884 #u2 0.3265647 #u1&u2 0.3006539
+mean_spce_stoG <- mean(spce_estimates_Sto_G); mean_spce_stoG #0.1895913 #u2 0.3482394 #u1&u20.3253651
+mean_spce_stoW <- mean(spce_estimates_Sto_W); mean_spce_stoW #0.2080809 #u2 0.4058067 #u1&u2 0.3736487
 
 #500iterations

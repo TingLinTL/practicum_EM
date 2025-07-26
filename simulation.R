@@ -1,8 +1,5 @@
 #Simulation
-source("DataG_U1.R")
-source("DataG_U2.R")
-source("DataG_U1&U2.R")
-source("DataG_U3.R")
+source("DataGenerating.R")
 
 source("regular EM/em draft.R")
 source("regular EM/SPCE_EM_G.R")

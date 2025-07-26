@@ -122,7 +122,7 @@ emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 50){
     ## === M-step: treatment model === ##
     z.fit <- optim(par = z.coef[1:(nx+1)],
                    fn  = fn_treat,
-                   x   = x, z = z, p = p, gammaz = gammaz)
+                   x   = x, z = z, p = p, gammaz = gammaz,method = "BFGS")
     z.coef <- c(z.fit$par, gammaz)
     
     t.coef1[is.na(t.coef1)] <- 0

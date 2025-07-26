@@ -1,5 +1,6 @@
 #Simulation
 source("DataGenerating.R")
+source("Data_G.R")
 
 source("regular EM/em draft.R")
 source("regular EM/SPCE_EM_G.R")
@@ -31,7 +32,8 @@ for (i in 1:n_sim) {
   #simulate_data(n,tau) #use data_sim 
   #simulate_data_U2(n, tau) #U2
   #simulate_data_U1_U2(n, tau) #U1&U2
-  simulate_data_U3(n, tau) #U3
+  #simulate_data_U3(n, tau) #U3
+  simulate_data(n, tau, U_type = "gamma") #binary, normal, gamma, binary+normal
   
   x_mat <- as.matrix(data_sim[, c("X1", "X2")]) # Prepare the covariate matrix
   

@@ -19,12 +19,15 @@ tau <- 5.5 #maximum follow-up time
 n_sim <-50 #number of simulation
 t_pred <- 2  #time point for estimates 
 true_spce <- 0.1901985 #true SPCE at time=2 from numeric iteration for weibull aft model
-n_boot <-100
+n_boot <-50
 
 spce_estimates_G <- numeric(n_sim)
 spce_estimates_W <- numeric(n_sim)
 spce_estimates_Sto_G <- numeric(n_sim)
 spce_estimates_Sto_W <- numeric(n_sim)
+
+boot_SE_G <- boot_SE_W <- boot_stoSE_G <- boot_stoSE_W <- numeric(n_sim)
+boot_cover_G <- boot_cover_W <- boot_cover_sto_G <- boot_cover_sto_W <- numeric(n_sim) 
 
 
 for (i in 1:n_sim) {
@@ -34,7 +37,7 @@ for (i in 1:n_sim) {
   #simulate_data_U2(n, tau) #U2
   #simulate_data_U1_U2(n, tau) #U1&U2
   #simulate_data_U3(n, tau) #U3
-  simulate_data(n, tau, U_type = "gamma") #binary, normal, gamma, binary+normal
+  simulate_data(n, tau, U_type = "binary") #binary, normal, gamma, binary+normal
   
   x_mat <- as.matrix(data_sim[, c("X1", "X2")]) # Prepare the covariate matrix
   
@@ -82,8 +85,7 @@ for (i in 1:n_sim) {
   ## === BOOTSTRAP inside this iteration === ##
   ## --------------------------------------- ##
   boot_spce_EM_G <- boot_spce_EM_W <- boot_spce_stoEM_G <- boot_spce_stoEM_W <-numeric(n_boot)
-  boot_SE_G <- boot_SE_W <- boot_stoSE_G <- boot_stoSE_W <- numeric(n_sim)
-  boot_cover_G <- boot_cover_W <- boot_cover_sto_G <- boot_cover_sto_W <- numeric(n_sim)  
+ 
   
   for (b in 1:n_boot) {
     
@@ -102,24 +104,39 @@ for (i in 1:n_sim) {
       gammaz = -0.8
     )
     
-    # compute SPCE for bootstrap sample G-computation
+    #compute SPCE for bootstrap sample G-computation
     boot_res_spce_G <- compute_SPCE_EM(
       res_em = boot_em,
       X      = x_boot,
       t0     = t_pred
     )
     
+    #compute SPCE for bootstrap sample weighting
+    boot_res_spce_W <- compute_IPW_SPCE_from_EM(
+      res_em = boot_em,
+      X      = x_boot,
+      Z      = data_boot$A,
+      M      = data_boot$M,
+      delta  = data_boot$delta,
+      t0     = t_pred
+    )
+    
+    
     boot_spce_EM_G[b] <- boot_res_spce_G$SPCE
+    boot_spce_EM_W[b] <- boot_res_spce_W$SPCE
   }
   
   ## bootstrap SE for this iteration
   boot_SE_G[i] <- sd(boot_spce_EM_G)
+  boot_SE_W[i] <- sd(boot_spce_EM_W)
   
   ## bootstrap CI (percentile)
-  ci_boot <- quantile(boot_spce_EM_G, probs = c(0.025, 0.975))
+  ci_boot_EM_G <- quantile(boot_spce_EM_G, probs = c(0.025, 0.975))
+  ci_boot_EM_W <- quantile(boot_spce_EM_W, probs = c(0.025, 0.975))
   
   ## check coverage
-  boot_cover_G[i] <- (true_spce >= ci_boot[1] & true_spce <= ci_boot[2])
+  boot_cover_G[i] <- (true_spce >= ci_boot_EM_G[1] & true_spce <= ci_boot_EM_G[2])
+  boot_cover_W[i] <- (true_spce >= ci_boot_EM_W[1] & true_spce <= ci_boot_EM_W[2])
   
   
   
@@ -192,7 +209,7 @@ ASE_G <- mean(boot_SE_G)
 
 # Coverage Probability
 CP_G  <- mean(boot_cover_G)
-
+CP_W  <- mean(boot_cover_W)
 
 # ## RMSD function (Root Mean Squared Deviation)
 # compute_RMSD <- function(estimates, true_value) {

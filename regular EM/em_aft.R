@@ -1,4 +1,4 @@
-emU_surv <- function(t, d, z, x, gammat, gammaz, theta = 0.5, iter = 50){
+emU_surv_aft <- function(t, d, z, x, gammat, gammaz, theta, iter = 20){
   fn_outcome <- function(params, t, d, x, z, p, gammat) {
     # Unpack params
     beta      <- params[1:(ncol(x)+1)]

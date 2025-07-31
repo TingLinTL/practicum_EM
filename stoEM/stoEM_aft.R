@@ -1,4 +1,4 @@
-surv_stoEM <- function(t, d, Z, X, zetat, zetaz, B, theta) {
+surv_stoEM_aft <- function(t, d, Z, X, zetat, zetaz, B, theta) {
   
   n <- length(t)
   
@@ -6,7 +6,7 @@ surv_stoEM <- function(t, d, Z, X, zetat, zetaz, B, theta) {
   final_sigma <- NULL
   
   for (j in 1:B){
-    Usim = SimulateU_surv(t, d, Z, X, zetat = zetat, zetaz = zetaz, theta = theta) 
+    Usim = SimulateU_surv_aft(t, d, Z, X, zetat = zetat, zetaz = zetaz, theta = theta) 
     
     
     t1.fit<- survreg(Surv(t,d) ~ X + Z + Usim$U, dist = "weibull")

@@ -1,4 +1,4 @@
-compute_SPCE_G <- function(beta_final, sigma_final, X, t0) {
+compute_SPCE_G_aft <- function(beta_final, sigma_final, X, t0) {
   alpha_weibull <- 1 / sigma_final
   
   # --- Z=1 ---

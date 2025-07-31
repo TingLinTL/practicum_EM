@@ -1,4 +1,4 @@
-compute_SPCE_EM <- function(res_em, X, t0) {
+compute_SPCE_EM_aft <- function(res_em, X, t0) {
   beta_final  <- res_em$t.coef1
   sigma_final <- res_em$sigma
   p_final     <- res_em$p
@@ -67,3 +67,39 @@ compute_SPCE_EM <- function(res_em, X, t0) {
 #     S_Z0 = mean(S_Z0)
 #   ))
 # }
+
+
+compute_SPCE_EM_cox <- function(res_em, X, t0) {
+  beta_all <- res_em$t.coef1
+  pU       <- res_em$p
+  baseH    <- res_em$basehaz1
+  
+  # Separate coefficients
+  zetat <- tail(beta_all, 1)       
+  beta  <- beta_all[-length(beta_all)]  # drop zetat
+  beta_z <- beta[1]
+  beta_x <- beta[-1]
+  
+  # linear predictors under Z=1 and Z=0
+  lp_Z1 <- as.vector(X %*% beta_x + beta_z * 1 + zetat * pU)
+  lp_Z0 <- as.vector(X %*% beta_x + beta_z * 0 + zetat * pU)
+  
+  # cumulative baseline hazard at t0
+  H0_t0 <- baseH$hazard[which.min(abs(baseH$time - t0))]
+  
+  # compute survival probabilities
+  S_Z1_i <- exp(-H0_t0 * exp(lp_Z1))
+  S_Z0_i <- exp(-H0_t0 * exp(lp_Z0))
+  
+  # average over individuals
+  S_Z1 <- mean(S_Z1_i)
+  S_Z0 <- mean(S_Z0_i)
+  SPCE <- S_Z1 - S_Z0
+  
+  return(list(
+    SPCE = SPCE,
+    S_Z1 = S_Z1,
+    S_Z0 = S_Z0
+  ))
+}
+

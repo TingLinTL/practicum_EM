@@ -2,13 +2,16 @@
 #source("DataGenerating.R")
 source("Data_G.R")
 
-source("regular EM/em draft.R")
+source("regular EM/em_aft.R")
+source("regular EM/em_cox.R")
 source("regular EM/SPCE_EM_G.R")
 source("regular EM/SPCE_EM_W.R")
 
-source("stoEM/SimulateU_surv.R")
+source("stoEM/SimulateU_surv_aft.R")
+source("stoEM/SimulateU_surv_cox.R")
 source("stoEM/stoEM trace.R")
-source("stoEM/stoEM draft.R")
+source("stoEM/stoEM_aft.R")
+source("stoEM/stoEM_cox.R")
 source("stoEM/SPCE_stoEM_G.R")
 source("stoEM/SPCE_stoEM_W.R")
 
@@ -42,14 +45,26 @@ for (i in 1:n_sim) {
   x_mat <- as.matrix(data_sim[, c("X1", "X2")]) # Prepare the covariate matrix
   
   ## ===  regular EM algorithm === ##
-  result_em <- emU_surv(
+  result_em_aft <- emU_surv_aft(
     t      = data_sim$M,
     d      = data_sim$delta,
     z      = data_sim$A,
     x      = x_mat,
+    theta  = 0.5,
     gammat = -0.8,
     gammaz = -0.8
   )
+  
+  result_em_cox <- emU_surv_cox(
+    t      = data_sim$M,
+    d      = data_sim$delta,
+    z      = data_sim$A,
+    x      = x_mat,
+    theta  = 0.5,
+    zetat  = -0.8,
+    zetaz  = -0.8
+  )
+  
   
   #========================================================
   # plot convergence of EM algorithm coefficients 
@@ -65,8 +80,14 @@ for (i in 1:n_sim) {
   #============================================================================
   
   #compute spce by g-computaion for regular EM algorithm
-  res_spce_G <- compute_SPCE_EM(
-    res_em = result_em,
+  res_spce_G_aft <- compute_SPCE_EM_aft(
+    res_em = result_em_aft,
+    X      = x_mat,
+    t0     = t_pred
+  )
+  
+  res_spce_G_cox <- compute_SPCE_EM_cox(
+    res_em = result_em_cox,
     X      = x_mat,
     t0     = t_pred
   )
@@ -156,21 +177,35 @@ for (i in 1:n_sim) {
   # legend("topright", legend = colnames( stoEM_trace), col = 1:ncol(stoEM_trace), lty = 1)
   # ====================================================================================
   
-  stoEM <- surv_stoEM(t= data_sim$M,
+  stoEM_aft <- surv_stoEM_aft(t= data_sim$M,
                       d= data_sim$delta,
                       Z= data_sim$A,
                       X= x_mat,
                       zetat=-0.8, zetaz=-0.8, B=100, theta=0.5)
+  
+  
+  stoEM_cox <- surv_stoEM_cox(t= data_sim$M,
+                              d= data_sim$delta,
+                              Z= data_sim$A,
+                              X= x_mat,
+                              zetat=-0.8, zetaz=-0.8, B=100, theta=0.5)
     
-    
+  
+  
+  
   #stochastic EM for SPCE by G-computation
-  stoEM_SPCE_G <- compute_SPCE_G(beta_final=stoEM$beta, 
-                                 sigma_final=stoEM$sigma, 
+  stoEM_SPCE_G_aft <- compute_SPCE_G_aft(beta_final=stoEM_aft$beta, 
+                                 sigma_final=stoEM_aft$sigma, 
                                  X= x_mat,t0=t_pred)
   
+  stoEM_SPCE_G_cox <- compute_SPCE_G_cox(beta_final=stoEM_cox$beta, 
+                                     X= x_mat,t0=t_pred) #have not finished yet
+  
+  
+  
   #stochastic EM for SPCE by weighting
-  stoEM_SPCE_W <- surv_stoEM_ipw(beta_final=stoEM$beta, 
-                                 sigma_final=stoEM$sigma, 
+  stoEM_SPCE_W <- surv_stoEM_ipw(beta_final=stoEM_aft$beta, 
+                                 sigma_final=stoEM_aft$sigma, 
                                  t= data_sim$M,
                                  d= data_sim$delta,
                                  Z= data_sim$A,

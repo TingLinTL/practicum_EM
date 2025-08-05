@@ -1,6 +1,7 @@
 #Simulation
 #source("DataGenerating.R")
-source("Data_G.R")
+source("Data_G_aft.R")
+source("Data_G_cox.R")
 
 source("regular EM/em_aft.R")
 source("regular EM/em_cox.R")
@@ -24,7 +25,7 @@ t_pred <- 2  #time point for estimates
 true_spce <- 0.1901985 #true SPCE at time=2 from numeric iteration for weibull aft model
 n_boot <-50
 
-spce_estimates_G <- numeric(n_sim)
+spce_estimates_G_cox <- numeric(n_sim)
 spce_estimates_W <- numeric(n_sim)
 spce_estimates_Sto_G <- numeric(n_sim)
 spce_estimates_Sto_W <- numeric(n_sim)
@@ -40,7 +41,8 @@ for (i in 1:n_sim) {
   #simulate_data_U2(n, tau) #U2
   #simulate_data_U1_U2(n, tau) #U1&U2
   #simulate_data_U3(n, tau) #U3
-  simulate_data(n, tau, U_type = "binary") #binary, normal, gamma, binary+normal
+  #simulate_data(n, tau, U_type = "binary") #binary, normal, gamma, binary+normal
+  simulate_data_cox_h0_1 (n, tau, U_type = "binary")
   
   x_mat <- as.matrix(data_sim[, c("X1", "X2")]) # Prepare the covariate matrix
   
@@ -93,14 +95,25 @@ for (i in 1:n_sim) {
   )
   
   #compute spce by weighting regular EM algorithm
-  res_spce_weight <- compute_IPW_SPCE_from_EM(
-    res_em = result_em,
+  res_spce_weight_aft <- compute_SPCE_EM_aft_W(
+    res_em = result_em_aft,
     X      = x_mat,
     Z      = data_sim$A,
     M      = data_sim$M,
     delta  = data_sim$delta,
     t0     = t_pred
   )
+  
+  res_spce_weight_cox <- compute_SPCE_EM_cox_W(
+    res_em = result_em_cox,
+    X      = x_mat,
+    Z      = data_sim$A,
+    M      = data_sim$M,
+    delta  = data_sim$delta,
+    t0     = t_pred
+  )
+  
+  res_spce_G_aft$SPCE;res_spce_G_cox$SPCE;res_spce_weight_aft$SPCE;res_spce_weight_cox$SPCE
   
   ## --------------------------------------- ##
   ## === BOOTSTRAP inside this iteration === ##
@@ -199,12 +212,14 @@ for (i in 1:n_sim) {
                                  X= x_mat,t0=t_pred)
   
   stoEM_SPCE_G_cox <- compute_SPCE_G_cox(beta_final=stoEM_cox$beta, 
-                                     X= x_mat,t0=t_pred) #have not finished yet
+                                         X= x_mat,
+                                         t0=t_pred, 
+                                         basehaz= stoEM_cox$basehaz) 
   
   
   
   #stochastic EM for SPCE by weighting
-  stoEM_SPCE_W <- surv_stoEM_ipw(beta_final=stoEM_aft$beta, 
+  stoEM_SPCE_W_aft <- surv_stoEM_ipw_aft(beta_final=stoEM_aft$beta, 
                                  sigma_final=stoEM_aft$sigma, 
                                  t= data_sim$M,
                                  d= data_sim$delta,
@@ -213,14 +228,19 @@ for (i in 1:n_sim) {
                                  t0=t_pred,
                                  stabilize=TRUE)
 
+  stoEM_SPCE_W_cox <- surv_stoEM_ipw_cox(beta_final=stoEM_cox$beta, 
+                                     basehaz=stoEM_cox$basehaz,
+                                     t0=t_pred, Z= data_sim$A,X= x_mat,
+                                     stabilize=TRUE)#have not finished yet
   
   
-  
-  
+  stoEM_SPCE_G_aft$SPCE;stoEM_SPCE_G_cox$SPCE; stoEM_SPCE_W_aft$SPCE;stoEM_SPCE_W_cox$SPCE
   
   #store values 
   
   spce_estimates_G[i] <- res_spce_G$SPCE
+  spce_estimates_G_cox[i] <- res_spce_G_cox$SPCE
+  
   spce_estimates_W[i] <- res_spce_weight$SPCE
   
   spce_estimates_Sto_G[i] <- stoEM_SPCE_G$SPCE

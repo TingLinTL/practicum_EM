@@ -32,3 +32,39 @@ compute_SPCE_G_aft <- function(beta_final, sigma_final, X, t0) {
   
   return(list(S_Z1 = S_Z1, S_Z0 = S_Z0, SPCE = SPCE))
 }
+
+
+compute_SPCE_G_cox <- function(beta_final, X, t0, basehaz) {
+  # linear predictors for all 4 combinations of Z and U
+  # --- Z=1 ---
+  lp_1_U1 <- cbind(X, 1, 1) %*% beta_final
+  lp_1_U0 <- cbind(X, 1, 0) %*% beta_final
+  # --- Z=0 ---
+  lp_0_U1 <- cbind(X, 0, 1) %*% beta_final
+  lp_0_U0 <- cbind(X, 0, 0) %*% beta_final
+  
+  # get cumulative baseline hazard at t0
+  H0_t0 <- approx(basehaz$time, basehaz$hazard, xout = t0,
+                  method = "linear", rule = 2)$y
+  
+  # compute survival probabilities
+  S_1_U1 <- exp(-H0_t0 * exp(lp_1_U1))
+  S_1_U0 <- exp(-H0_t0 * exp(lp_1_U0))
+  S_0_U1 <- exp(-H0_t0 * exp(lp_0_U1))
+  S_0_U0 <- exp(-H0_t0 * exp(lp_0_U0))
+  
+  # marginalize over U ~ Bern(0.5)
+  S_Z1_i <- 0.5 * S_1_U1 + 0.5 * S_1_U0
+  S_Z0_i <- 0.5 * S_0_U1 + 0.5 * S_0_U0
+  
+  # average over individuals
+  S_Z1 <- mean(S_Z1_i)
+  S_Z0 <- mean(S_Z0_i)
+  SPCE <- S_Z1 - S_Z0
+  
+  return(list(
+    S_Z1 = S_Z1,
+    S_Z0 = S_Z0,
+    SPCE = SPCE
+  ))
+}

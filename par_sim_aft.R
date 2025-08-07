@@ -481,7 +481,7 @@ surv_stoEM_ipw_cox <- function(t, d, Z, X, zetat, zetaz, B, theta = 0.5){
 
 one_sim_run <- function(i) {
   set.seed(2000 + i)
-  n <- 500; tau <- 5.5; t_pred <- 2; n_boot <- 100  
+  n <- 500; tau <- 5.5; t_pred <- 2; n_boot <- 100
   # 1. Data generation 
   X1 <- rbinom(n, size = 1, prob = 0.4)
   X2 <- rbinom(n, size = 1, prob = 0.6)
@@ -630,8 +630,8 @@ one_sim_run <- function(i) {
   c(
     EM_AFT = res_spce_weight_aft$SPCE,
     EM_Cox = res_spce_weight_cox$SPCE,
-    StoEM_AFT = stoEM_SPCE_W_aft$SPCE,
-    StoEM_Cox = stoEM_SPCE_W_cox$SPCE,
+    StoEM_AFT = stoEM_SPCE_W_aft$spce,
+    StoEM_Cox = stoEM_SPCE_W_cox$spce,
     EM_AFT_SD = sd(boot_spce_EM_aft),
     EM_Cox_SD = sd(boot_spce_EM_cox),
     StoEM_AFT_SD = sd(boot_spce_Sto_aft),
@@ -639,7 +639,7 @@ one_sim_run <- function(i) {
   )
 }
 
-n_sim <- 10
+n_sim <- 9
 cores <- parallel::detectCores(logical = FALSE) - 1
 cl <- makeCluster(cores)
 

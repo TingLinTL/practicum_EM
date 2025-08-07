@@ -552,8 +552,8 @@ one_sim_run <- function(i) {
   pi_A      <- pnorm(linpred_A)
   A         <- rbinom(n, size = 1, prob = pi_A)
   beta_A <- -0.5; beta_x1 <- -0.1; beta_x2 <- 0.4;beta_u <- -0.8
-  lp_a1 <- beta_A * 1 + beta_x1 * X1 + beta_x2 * X2
-  lp_a0  <- beta_A * 0 + beta_x1 * X1 + beta_x2 * X2
+  lp_a1 <- beta_A * 1 + beta_x1 * X1 + beta_x2 * X2 + beta_u * U1
+  lp_a0  <- beta_A * 0 + beta_x1 * X1 + beta_x2 * X2 + beta_u * U1
   D_a1 <- -log(runif(n)) / exp(lp_a1)
   D_a0 <- -log(runif(n)) / exp(lp_a0)
   C_a0 <- runif(n, 0.1, tau); C_a1 <- runif(n, 0.1, tau)

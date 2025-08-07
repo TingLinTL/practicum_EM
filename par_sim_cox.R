@@ -554,8 +554,8 @@ one_sim_run <- function(i) {
   beta_A <- -0.5; beta_x1 <- -0.1; beta_x2 <- 0.4;beta_u <- -0.8
   lp_a1 <- beta_A * 1 + beta_x1 * X1 + beta_x2 * X2
   lp_a0  <- beta_A * 0 + beta_x1 * X1 + beta_x2 * X2
-  D_a1 <- -log(runif(n)) / exp(linpred_a1)
-  D_a0 <- -log(runif(n)) / exp(linpred_a0)
+  D_a1 <- -log(runif(n)) / exp(lp_a1)
+  D_a0 <- -log(runif(n)) / exp(lp_a0)
   C_a0 <- runif(n, 0.1, tau); C_a1 <- runif(n, 0.1, tau)
   M <- ifelse(A == 1, pmin(tau, C_a1, D_a1), pmin(tau, C_a0, D_a0))
   delta <- ifelse(A == 1, as.numeric(D_a1 <= pmin(tau, C_a1)), as.numeric(D_a0 <= pmin(tau, C_a0)))

@@ -543,7 +543,7 @@ surv_stoEM_ipw_cox <- function(beta_final,
 one_sim_run <- function(i) {
   set.seed(2000 + i)
   n <- 500; tau <- 5.5; t_pred <- 2; n_boot <- 100  
-  # 1. Data generation (as in your loop)
+  # 1. Data generation 
   X1 <- rbinom(n, size = 1, prob = 0.4)
   X2 <- rbinom(n, size = 1, prob = 0.6)
   U1 <- rbinom(n, size = 1, prob = 0.5)

@@ -340,8 +340,7 @@ SimulateU_surv_aft <- function(t, d, z, x, zetat, zetaz, theta, iter = 20){
   return(list(U = U, p = p))
 }
 
-
-SimulateU_surv_cox <- function(t, d, z, x, zetat, zetaz, theta, iter = 20){
+SimulateU_surv_cox <- function(t, d, z, x, zetat, zetaz, theta, iter = 20, weights = NULL){
   #t is a vector of n, time to event
   #d is a vector of n, indicator of event
   #z is a vector of n, treatment
@@ -357,19 +356,22 @@ SimulateU_surv_cox <- function(t, d, z, x, zetat, zetaz, theta, iter = 20){
   #Upath = U (useful for checking convergence)
   
   for(j in 1:iter){
+    
     #fit time to event
-    U.fit1 = coxph(Surv(t,d) ~ z + x + U)
+    U.fit1 = coxph(Surv(t,d) ~ z + x + U, weights=weights)
     t.coef1 = U.fit1$coef
     t.coef1[length(t.coef1)]  = zetat
     #fit treatment
     z.coef = glm(z ~ x + U, family = binomial(link="probit"), control = glm.control(epsilon = 1e-6, maxit = 50))$coef
     z.coef[length(z.coef)] = zetaz
     
+    
     t.coef1[is.na(t.coef1)] = 0
     z.coef[is.na(z.coef)] = 0
     
     bh1 = basehaz(U.fit1, centered=F) #cumulative baseline hazard for remission
     index1 = match(t,bh1$time)
+    
     
     ptzu1 = (1-pnorm(cbind(1,x,1)%*%matrix(z.coef, ncol = 1)))^(1-z)*
       pnorm(cbind(1,x,1)%*%matrix(z.coef, ncol = 1))^z*theta*
@@ -378,6 +380,7 @@ SimulateU_surv_cox <- function(t, d, z, x, zetat, zetaz, theta, iter = 20){
     ptzu0 = (1-pnorm(cbind(1,x,0)%*%matrix(z.coef, ncol = 1)))^(1-z)*
       pnorm(cbind(1,x,0)%*%matrix(z.coef, ncol = 1))^z*(1-theta)*
       exp(cbind(z,x,0)%*%matrix(t.coef1, ncol = 1))^d * exp(-bh1[index1,1] * exp(cbind(z,x,0)%*%matrix(t.coef1, ncol = 1)))
+    
     
     p = ptzu1/(ptzu1 + ptzu0)
     p[ptzu1==0 & ptzu0==0] = 0
@@ -389,154 +392,90 @@ SimulateU_surv_cox <- function(t, d, z, x, zetat, zetaz, theta, iter = 20){
   return(list(U = U, p = p))
 }
 
-surv_stoEM_aft <- function(t, d, Z, X, zetat, zetaz, B, theta) {
+surv_stoEM_ipw_aft <- function(t, d, Z, X, zetat, zetaz, B, theta = 0.5){
   
-  n <- length(t)
+  nx = 2
+  n = length(t)
   
-  final_beta <- NULL
-  final_sigma <- NULL
+  
+  #Record coefficients with simulated U
+  spce = numeric(B)
   
   for (j in 1:B){
-    Usim = SimulateU_surv_aft(t, d, Z, X, zetat = zetat, zetaz = zetaz, theta = theta) 
+    Usim = SimulateU_surv_aft(t, d, Z, X, zetat = zetat, zetaz = zetaz, theta = theta)
     
+    Z.fit = glm(Z ~ X, offset = zetaz * Usim$U, family=binomial(link="probit"))
     
-    t1.fit<- survreg(Surv(t,d) ~ X + Z + Usim$U, dist = "weibull")
+    ps = Z.fit$fitted.values
+    ipw = (sum(Z)/n) * Z/ps + (1-(sum(Z)/n))*(1-Z)/(1-ps)
+    ipw = pmin(ipw, 10)
+    ipw = pmax(ipw, 0.1)
     
-    # extract parameters
-    final_beta <- t1.fit$coef       # β0, β_X, β_Z, β_U
-    final_sigma <- t1.fit$scale      # Weibull scale parameter
-    #alpha <- 1 / sigma_hat        # Weibull shape 
+    t1.ipw<- survreg(Surv(t,d) ~ Z, dist = "weibull", weights = ipw, robust = TRUE)
+    
+    scale <- t1.ipw$scale
+    shape <- 1 / scale
+    coef <- t1.ipw$coefficients
+    
+    new_Z1 <- data.frame(Z = rep(1, n))
+    new_Z0 <- data.frame(Z = rep(0, n))
+    # Linear predictors
+    lp1 <- model.matrix(~ Z, data = new_Z1) %*% coef
+    lp0 <- model.matrix(~ Z, data = new_Z0) %*% coef
+    
+    # Linear scale (i.e., time scale)
+    scale1 <- exp(lp1)
+    scale0 <- exp(lp0)
+    
+    # Predict survival probability at t = 2
+    t0 <- 2
+    S1 <- exp(- (t0 / scale1)^shape)
+    S0 <- exp(- (t0 / scale0)^shape)
+    
+    # Compute SPCE
+    spce[j] <- mean(S1) - mean(S0)
     
   }
-  # return only the *final* coefficients after B iterations
-  return(list(
-    beta = final_beta,    # includes β0, β_X, β_Z, β_U
-    sigma = final_sigma   # Weibull scale
-  ))
-}
-
-surv_stoEM_cox <- function(t, d, Z, X, zetat, zetaz, B, theta) {
-  nx <- ncol(X)
-  n <- length(t)
   
-  final_beta <- NULL
-  final_fit  <- NULL
+  spce = mean(spce)
   
-  for (j in 1:B) {
-    Usim <- SimulateU_surv_cox(t, d, Z, X, zetat = zetat, zetaz = zetaz, theta = theta)
-    
-    t1.fit <- coxph(Surv(t, d) ~ X + Z + Usim$U)
-    
-    final_beta <- t1.fit$coef
-    final_fit  <- t1.fit  
-  }
   
-  return(list(
-    beta    = final_beta,
-    fit     = final_fit,
-    basehaz = basehaz(final_fit, centered = FALSE)
-  ))
-}
-
-surv_stoEM_ipw_aft  <- function(beta_final, sigma_final,
-                                t, d, Z, X,
-                                t0,
-                                stabilize) {
-  alpha <- 1 / sigma_final
-  n <- nrow(X)
-  
-  # --- Estimate propensity scores ---
-  ps_model <- glm(Z ~ ., data = data.frame(Z = Z, X), family = binomial)
-  ps_hat <- predict(ps_model, type = "response")
-  
-  # --- Compute IP weights ---
-  if (stabilize) {
-    # stabilized weights
-    pZ <- mean(Z)
-    w <- ifelse(Z == 1,
-                pZ / ps_hat,
-                (1 - pZ) / (1 - ps_hat))
-  } else {
-    # unstabilized weights
-    w <- ifelse(Z == 1, 1 / ps_hat, 1 / (1 - ps_hat))
-  }
-  
-  # --- Compute survival under Z=1 & Z=0 ---
-  # we marginalize U as 0.5 (prior)
-  mu_Z1 <- cbind(1, X, 1, 0.5) %*% beta_final
-  mu_Z0 <- cbind(1, X, 0, 0.5) %*% beta_final
-  
-  lambda_Z1 <- exp(-mu_Z1)
-  lambda_Z0 <- exp(-mu_Z0)
-  
-  S_Z1_i <- exp(-(lambda_Z1 * t0)^alpha)
-  S_Z0_i <- exp(-(lambda_Z0 * t0)^alpha)
-  
-  # --- weighted marginal survival ---
-  S_Z1 <- sum(w * S_Z1_i) / sum(w)
-  S_Z0 <- sum(w * S_Z0_i) / sum(w)
-  
-  # --- SPCE ---
-  SPCE <- S_Z1 - S_Z0
-  
-  return(list(
-    S_Z1 = S_Z1,
-    S_Z0 = S_Z0,
-    SPCE = SPCE,
-    weights = w,
-    ps_hat = ps_hat
-  ))
+  return(list(spce = spce))
 }
 
 
-surv_stoEM_ipw_cox <- function(beta_final,
-                               basehaz,     
-                               t0,
-                               Z, X,
-                               stabilize = TRUE) {
-  n <- nrow(X)
+
+
+surv_stoEM_ipw_cox <- function(t, d, Z, X, zetat, zetaz, B, theta = 0.5){
   
-  # --- Estimate propensity scores ---
-  ps_model <- glm(Z ~ ., data = data.frame(Z = Z, X), family = binomial)
-  ps_hat <- predict(ps_model, type = "response")
+  nx = 2
+  n = length(t)
   
-  # --- Compute IP weights ---
-  if (stabilize) {
-    pZ <- mean(Z)
-    w <- ifelse(Z == 1, pZ / ps_hat, (1 - pZ) / (1 - ps_hat))
-  } else {
-    w <- ifelse(Z == 1, 1 / ps_hat, 1 / (1 - ps_hat))
+  
+  #Record coefficients with simulated U
+  spce = numeric(B)
+  
+  for (j in 1:B){
+    Usim = SimulateU_surv_cox(t, d, Z, X, zetat = zetat, zetaz = zetaz, theta = theta)
+    
+    Z.fit = glm(Z ~ X, offset = zetaz * Usim$U, family=binomial(link="probit"))
+    
+    ps = Z.fit$fitted.values
+    ipw = (sum(Z)/n) * Z/ps + (1-(sum(Z)/n))*(1-Z)/(1-ps)
+    ipw = pmin(ipw, 10)
+    ipw = pmax(ipw, 0.1)
+    
+    t1.ipw = coxph(Surv(t, d) ~ Z, weights = ipw, robust = TRUE)
+    
+    spce[j] = mean(predict(t1.ipw, newdata=data.frame(Z=c(rep(1,n))),type = "survival", times = 2))-
+      mean(predict(t1.ipw, newdata=data.frame(Z=c(rep(0,n))),type = "survival", times = 2))
+    
   }
   
-  # --- Extract Cox coefficients ---
-  beta_x <- beta_final[1:ncol(X)]
-  beta_z <- beta_final["Z"]
-  beta_u <- beta_final[length(beta_final)]  
+  spce = mean(spce)
   
-  # --- Linear predictors (marginalize over U = 0.5) ---
-  lp_Z1 <- as.vector(X %*% beta_x + beta_z * 1 + beta_u * 0.5)
-  lp_Z0 <- as.vector(X %*% beta_x + beta_z * 0 + beta_u * 0.5)
   
-  # --- Baseline cumulative hazard at t0 ---
-  H0_t0 <- approx(basehaz$time, basehaz$hazard, xout = t0, method = "linear", rule = 2)$y
-  
-  # --- Individual survival probabilities ---
-  S_Z1_i <- exp(-H0_t0 * exp(lp_Z1))
-  S_Z0_i <- exp(-H0_t0 * exp(lp_Z0))
-  
-  # --- Weighted marginal survival ---
-  S_Z1 <- sum(w * S_Z1_i) / sum(w)
-  S_Z0 <- sum(w * S_Z0_i) / sum(w)
-  
-  SPCE <- S_Z1 - S_Z0
-  
-  return(list(
-    SPCE = SPCE,
-    S_Z1 = S_Z1,
-    S_Z0 = S_Z0,
-    weights = w,
-    ps_hat = ps_hat
-  ))
+  return(list(spce = spce))
 }
 
 
@@ -610,33 +549,17 @@ one_sim_run <- function(i) {
   
   ## ===  Stochastic EM algorithm === ##
   
-  stoEM_aft <- surv_stoEM_aft(t= data_sim$M,
-                              d= data_sim$delta,
-                              Z= data_sim$A,
-                              X= x_mat,
-                              zetat=-0.8, zetaz=-0.8, B=10, theta=0.5)
-  
-  
-  stoEM_cox <- surv_stoEM_cox(t= data_sim$M,
-                              d= data_sim$delta,
-                              Z= data_sim$A,
-                              X= x_mat,
-                              zetat=-0.8, zetaz=-0.8, B=10, theta=0.5)
-  
   #stochastic EM for SPCE by weighting
-  stoEM_SPCE_W_aft <- surv_stoEM_ipw_aft(beta_final=stoEM_aft$beta, 
-                                         sigma_final=stoEM_aft$sigma, 
-                                         t= data_sim$M,
+  stoEM_SPCE_W_aft <- surv_stoEM_ipw_aft(t= data_sim$M,
                                          d= data_sim$delta,
                                          Z= data_sim$A,
-                                         X= x_mat,
-                                         t0=t_pred,
-                                         stabilize=TRUE)
+                                         X= x_mat, zetat=-0.8, zetaz=-0.8, B=10, theta = 0.5)
   
-  stoEM_SPCE_W_cox <- surv_stoEM_ipw_cox(beta_final=stoEM_cox$beta, 
-                                         basehaz=stoEM_cox$basehaz,
-                                         t0=t_pred, Z= data_sim$A,X= x_mat,
-                                         stabilize=TRUE)
+  
+  stoEM_SPCE_W_cox <- surv_stoEM_ipw_cox(t= data_sim$M,
+                                         d= data_sim$delta,
+                                         Z= data_sim$A,
+                                         X= x_mat, zetat=-0.8, zetaz=-0.8, B=10, theta = 0.5)
   
   ## --------------------------------------- ##
   ## === BOOTSTRAP inside the iteration  === ##
@@ -692,42 +615,16 @@ one_sim_run <- function(i) {
     )$SPCE
     
     ## ---------- StoEM AFT ----------
-    boot_sto_aft <- surv_stoEM_aft(
-      t = data_boot$M,
-      d = data_boot$delta,
-      Z = data_boot$A,
-      X = x_boot,
-      zetat = -0.8, zetaz = -0.8, B = 10, theta = 0.5
-    )
+    boot_spce_Sto_aft[b] <- surv_stoEM_ipw_aft(t= data_boot$M,
+                                               d = data_boot$delta,
+                                               Z = data_boot$A, X = x_boot, zetat=-0.8, zetaz=-0.8, B=10, theta = 0.5)$spce
     
-    boot_spce_Sto_aft[b] <- surv_stoEM_ipw_aft(
-      beta_final = boot_sto_aft$beta,
-      sigma_final = boot_sto_aft$sigma,
-      t = data_boot$M,
-      d = data_boot$delta,
-      Z = data_boot$A,
-      X = x_boot,
-      t0 = t_pred,
-      stabilize = TRUE
-    )$SPCE
     
     ## ---------- StoEM Cox ----------
-    boot_sto_cox <- surv_stoEM_cox(
-      t = data_boot$M,
-      d = data_boot$delta,
-      Z = data_boot$A,
-      X = x_boot,
-      zetat = -0.8, zetaz = -0.8, B = 10, theta = 0.5
-    )
-    
-    boot_spce_Sto_cox[b] <- surv_stoEM_ipw_cox(
-      beta_final = boot_sto_cox$beta,
-      basehaz    = boot_sto_cox$basehaz,
-      Z = data_boot$A,
-      X = x_boot,
-      t0 = t_pred,
-      stabilize = TRUE
-    )$SPCE
+    boot_spce_Sto_cox[b] <- surv_stoEM_ipw_cox(t= data_boot$M,
+                                               d = data_boot$delta,
+                                               Z = data_boot$A, X = x_boot, zetat=-0.8, zetaz=-0.8, B=10, theta = 0.5)$spce
+
   }
   
   c(

@@ -445,14 +445,10 @@ for (i in 1:n_sim) {
   lp_a1 <- eta_A*1 + eta_x1*X1 + eta_x2*X2 + eta_u*U1
   lp_a0 <- eta_A*0 + eta_x1*X1 + eta_x2*X2 + eta_u*U1
   
-  # Hazard for treatment and control groups (exponential form)
-  lambda1 <- exp(lp_a1)  # Hazard for treatment
-  lambda0 <- exp(lp_a0)  # Hazard for control
-  
-  # Generate event times using exponential distribution based on hazard rate
-  U <- runif(n)  # Uniform random variables
-  D_a1 <- -log(U) / lambda1  # Survival times for treatment group
-  D_a0 <- -log(U) / lambda0  # Survival times for control group
+  v <- 2       # shape
+  lambda <- 0.1 # baseline rate
+  D_a1 <- (-log(U) / (lambda * exp(lp_a1)))^(1 / v)
+  D_a0 <- (-log(U) / (lambda * exp(lp_a0)))^(1 / v)
   
   ## ---- Non-informative censoring ----
   C_a0 <- runif(n, 0.1, 5.5)

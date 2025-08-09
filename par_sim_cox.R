@@ -6,7 +6,7 @@ set.seed(2000)
 n <- 500
 tau <- 5.5
 t_pred <- 2
-n_sim <- 9 
+n_sim <- 200
 n_boot <- 100
 true_spce_aft <- 0.1573018
 
@@ -541,7 +541,7 @@ results_df <- data.frame(
 )
 
 # Save final result
-write.csv(results_df, "sim_results_test.csv", row.names = FALSE)
+write.csv(results_df, "sim_cox_results_combined.csv", row.names = FALSE)
 
 
 

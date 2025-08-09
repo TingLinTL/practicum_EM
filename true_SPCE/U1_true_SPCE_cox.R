@@ -1,68 +1,44 @@
-beta_A <- -0.5
-beta_x1 <- -0.1
-beta_x2 <- 0.4
-beta_u <- -0.8
-
-t_val <- 2  # time point for SPCE
-
-# S(t | A=1, x1, x2, u)
-cox_survival_treat1 <- function(t, x1, x2, u) {
-  linpred <- beta_A * 1 + beta_x1 * x1 + beta_x2 * x2 + beta_u * u
-  S_t <- exp(-t * exp(linpred))
-  return(S_t)
-}
-
-# S(t | A=0, x1, x2, u)
-cox_survival_treat0 <- function(t, x1, x2, u) {
-  linpred <- beta_A * 0 + beta_x1 * x1 + beta_x2 * x2 + beta_u * u
-  S_t <- exp(-t * exp(linpred))
-  return(S_t)
-}
-
-
-# Pr(X1=1) = 0.4, Pr(X2=1) = 0.6
-integrate_X_given_U_treat1 <- function(t, u) {
-  x1_vals <- c(0, 1)
-  x2_vals <- c(0, 1)
-  sum_val <- 0
-  for (x1 in x1_vals) {
-    for (x2 in x2_vals) {
-      prob_x1 <- ifelse(x1 == 1, 0.4, 0.6)
-      prob_x2 <- ifelse(x2 == 1, 0.6, 0.4)
-      sum_val <- sum_val + cox_survival_treat1(t, x1, x2, u) * prob_x1 * prob_x2
-    }
+# Function to compute true SPCE based on CoxPH data generation process
+true_spce_population <- function(t0 = 2, 
+                                 pX1 = 0.4, pX2 = 0.6, pU = 0.5,
+                                 eta_A = -0.5, eta_x1 = -0.1, eta_x2 = 0.4, eta_u = -0.8) {
+  
+  vals <- 0
+  
+  # Iterate over all combinations of X1, X2, and U (since they are binary)
+  for (x1 in 0:1) for (x2 in 0:1) for (u in 0:1) {
+    
+    # Compute the weight for this combination of covariates
+    w <- (if (x1 == 1) pX1 else 1 - pX1) *
+      (if (x2 == 1) pX2 else 1 - pX2) *
+      (if (u == 1) pU else 1 - pU)
+    
+    # Calculate the linear predictor for covariates
+    bx <- eta_x1 * x1 + eta_x2 * x2 + eta_u * u
+    
+    # Hazard for treatment group (Z = 1) (note: eta_A contributes to treatment effect)
+    lambda1 <- exp(eta_A + bx)  # Hazard for treatment
+    
+    # Hazard for control group (Z = 0) (no treatment effect, so no eta_A term)
+    lambda0 <- exp(bx)  # Hazard for control
+    
+    # Compute the survival probability for treatment group (Z=1) at t_0
+    S1 <- exp(-lambda1 * t0)
+    
+    # Compute the survival probability for control group (Z=0) at t_0
+    S0 <- exp(-lambda0 * t0)
+    
+    # Compute the contribution to the true SPCE from this covariate combination
+    vals <- vals + w * (S1 - S0)
   }
-  return(sum_val)
+  
+  # Return the computed true SPCE
+  return(vals)
 }
 
-integrate_X_given_U_treat0 <- function(t, u) {
-  x1_vals <- c(0, 1)
-  x2_vals <- c(0, 1)
-  sum_val <- 0
-  for (x1 in x1_vals) {
-    for (x2 in x2_vals) {
-      prob_x1 <- ifelse(x1 == 1, 0.4, 0.6)
-      prob_x2 <- ifelse(x2 == 1, 0.6, 0.4)
-      sum_val <- sum_val + cox_survival_treat0(t, x1, x2, u) * prob_x1 * prob_x2
-    }
-  }
-  return(sum_val)
-}
+# Example: Compute True SPCE at time t0 = 2
+true_spce_population(t0 = 2, eta_A = -0.5, eta_x1 = -0.1, eta_x2 = 0.4, eta_u = -0.8)
 
-marginal_survival_treat1 <- function(t) {
-  0.5 * integrate_X_given_U_treat1(t, u = 0) +
-    0.5 * integrate_X_given_U_treat1(t, u = 1)
-}
 
-marginal_survival_treat0 <- function(t) {
-  0.5 * integrate_X_given_U_treat0(t, u = 0) +
-    0.5 * integrate_X_given_U_treat0(t, u = 1)
-}
 
-true_SPCE_cox <- function(t) {
-  marginal_survival_treat1(t) - marginal_survival_treat0(t)
-}
-
-marginal_survival_treat1(t_val)  # survival probability under treatment
-marginal_survival_treat0(t_val)  # survival probability under control
-true_SPCE_cox(t_val)             # true SPCE 0.1573018
+#true 0.1573018

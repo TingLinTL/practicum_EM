@@ -546,7 +546,7 @@ write.csv(results_df, "sim_cox_results_combined.csv", row.names = FALSE)
 
 
 # ==================== generate table ====================#
-results_df <- read.csv("sim_results_test.csv")
+results_df <- read.csv("sim_cox_results_combined.csv")
 
 tablerow <- function(estimator, spcevalues, sdvalues, truevalue, cilvalues=NULL, ciuvalues=NULL) {
   
